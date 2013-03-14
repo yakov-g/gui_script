@@ -1,5 +1,6 @@
 import xml.parsers.expat
 import sys, os, re
+import subprocess
 
 from xml.etree.ElementTree import Element, SubElement, Comment, tostring
 from xml.dom import minidom
@@ -30,6 +31,9 @@ class Cparser(object):
     print_flag = _print_flag
 
     self.typedef_enum = {}
+    self.typedef_enum_print = {}
+    self.typedef_auto = {}
+
     self.cl_data = {}
     self.cl_incl = {}
 
@@ -484,7 +488,27 @@ class Cparser(object):
     f = open (filename, 'r')
     allfile = f.read()
     f.close()
-   #fetch all "#typedef" from file
+
+    #print filename
+    matcher = re.compile("typedef[^;\n]*;")
+    ss = matcher.findall(allfile)
+    typedefs = []
+    for tup in ss:
+       s = tup.replace("typedef ", "").replace(";", "")
+       s = " ".join(s.split()) #removing more than one spaces
+       flag = 1;
+       for l in ["enum", "struct", "(*"]:
+         if l in s:
+           flag = 0
+       if flag is 1:
+         p = s.rfind(" ")
+         bt = s[ : p]
+         dt = s[p + 1:]
+         #print "%s :: %s"%(bt, dt)
+         self.typedef_auto[dt] = bt
+
+
+   #fetch all "#typedef enum" from file
     matcher = re.compile(r"^[ \t]*(typedef enum([^;]*)*;)",re.MULTILINE)
     ss = matcher.findall(allfile)
     for tup in ss:
@@ -597,13 +621,14 @@ class Cparser(object):
 
   def typedef_printf_get(self):
     ret_lst = []
-    for n, (f, t) in self.typedef_enum.items():
+    for n, (f, t) in self.typedef_enum_print.items():
+       #print n, t
        for l in t:
-          s = "printf(\"%%s, %%d\", \"%s\", %s);"%(l, l)
+          s = "printf(\"%%s,%%d:\", \"%s\", %s);"%(l, l)
           ret_lst.append(s)
     return ret_lst
 
-  def typedef_file_create(self):
+  def typedef_file_create(self, _tup):
     f = open ("typedefs.c", 'w')
     f.write("#include <stdio.h>\n");
     f.write("#include <Elementary.h>\n\n");
@@ -614,13 +639,176 @@ class Cparser(object):
     for l in lst:
        f.write("\t" + l + "\n")
 
-
     f.write("}");
     f.close()
 
+    #subprocess.call(["gcc", "-o start", "typedefs.c", "`pkg-config --cflags --libs elementary`"])
+    #subprocess.call(["pkg-config", "--cflags", "--libs", "elementary"])
+    pr = subprocess.Popen(["pkg-config", "--cflags", "--libs", "elementary"], stdout = subprocess.PIPE)
+    out, err = pr.communicate()
+
+    gcc_lst = ["gcc", "-o", "start", "typedefs.c"]
+    gcc_lst += out.split()
+
+    subprocess.call(gcc_lst)
+    pr = subprocess.Popen(["./start"], stdout = subprocess.PIPE)
+    out, err = pr.communicate()
+    lst = filter(len, out.split(":"))
+    os.unlink("typedefs.c")
+    os.unlink("start")
+
+    f = open ("db_dynamic_init.h", 'w')
+    f.write("#ifndef _DB_DYNAMIC_INIT_H\n")
+    f.write("#define _DB_DYNAMIC_INIT_H\n\n")
+    f.write("static Gui_Type _null[] = {GUI_TYPE_NONE};\n\n")
+    f.write("Enum_Props enum_arr[] = {\n")
+    for s in lst:
+       ab = s.split(",")
+       a = ab[0]
+       b = ab[1]
+       #print a, b
+       ss = "\t{\"%s\", {%s}},\n"%(a, b)
+       f.write(ss)
+    f.write("\t{NULL, {0}}\n")
+    f.write("};\n\n")
+
+  # generating array of enum type names and values
+    type_var_lst = []
+    for n, (f1, t) in self.typedef_enum_print.items():
+       s = "\t{\"%s\", %s_enums},"%(n, n)
+       type_var_lst.append(s)
+       s = "\", \"".join(t)
+       s = "char *%s_enums[] = {\"%s\", NULL};"%(n, s)
+       f.write("%s\n"%s)
+
+    s = "\nEnum_Types enum_types[] =\n{%s\n\t{NULL, NULL}\n};\n\n"%("\n".join(type_var_lst))
+    f.write("%s"%s)
+
+    op_type_init_lst = _tup[0]
+    op_desc_init_lst = _tup[1]
+    f.write("%s\n\n"%("\n".join(op_type_init_lst)))
+
+    s_tmp = ",\n".join(op_desc_init_lst)
+    s_tmp = "OP _eo_op_arr[] = {\n%s,\n\t{NULL, {NULL, 0, 0, 0, \"\", _null}}\n};\n"%(s_tmp)
+    f.write("%s"%s_tmp)
+
+    f.write("\n#endif\n")
+
+    f.close();
+
+  
+  def gui_type_resolve(self, t):
+     _t = t
+     gui_types = {
+          "int" : "GUI_TYPE_SINT",
+          "short" : "GUI_TYPE_SHORT",
+          "unsigned int" : "GUI_TYPE_UINT",
+          "size_t" : "GUI_TYPE_UINT",
+          "Eina_Bool" : "GUI_TYPE_BOOL",
+          "double" : "GUI_TYPE_DOUBLE",
+          "char*" : "GUI_TYPE_STRING",
+          "char**" : "GUI_TYPE_STRING*",
+          "void*" : "GUI_TYPE_VOID",
+          "Eina_Bool*" : "GUI_TYPE_VOID*",
+          "Evas_Object*" : "GUI_TYPE_OBJECT",
+          "Evas_Map*" : "GUI_TYPE_MAP*",
+          }
+
+     ret = "GUI_TYPE_UNKNOWN"
+     keep_searching = True
+     force_quit = False
+     while keep_searching:
+        if force_quit:
+           break
+        force_quit = True
+        if t in gui_types:
+          ret = gui_types[t]
+          keep_searching = False
+          force_quit = False
+        elif t in self.typedef_enum:
+          #need to add this enum into compilation file
+          self.typedef_enum_print[t] = self.typedef_enum[t]
+          ret = "GUI_TYPE_ENUM"
+          keep_searching = False
+          force_quit = False
+        elif t in self.typedef_auto:
+          t = self.typedef_auto[t]      
+          force_quit = False
+
+     if force_quit:
+        print "type: \"%s\" not found"%(_t)
+     return (ret, t)
+
+  def func_name_check(self, _s, _lst):
+     for tokens_lst in _lst:
+        ret = True
+        for l in tokens_lst:
+          if l not in _s:
+             ret = False
+        if ret:
+          return ret
+     return ret
 
 
+  def gui_parser_data_get(self):
+    op_types_init_lst = []
+    op_desc_init_lst = []
 
+    lst = []
+    f = open('func_names', 'r')
+    allfile = f.read()
+    f.close()
+
+    lst_tmp = filter(len, allfile.split("\n"))
+    for l in lst_tmp:
+       lst.append(filter(len, l.split(",")))
+
+    for kl_id in self.cl_data:
+      #print ""
+      #print kl_id
+      kl = self.cl_data[kl_id]
+      kk = "funcs"
+
+      #print "  ", kk, " : ", type(kl[kk])# " : ", cp.cl_data[klass][kk]
+      funcs_dict = kl[kk]
+      spaces = " " * 15
+      #for each func in class
+      for key in funcs_dict:
+         cur_f = funcs_dict[key]
+         cur_f_name = cur_f[const.C_MACRO]
+         add_this_func = 0
+         type_str = []
+         if self.func_name_check(cur_f_name, lst):
+           add_this_func = 1
+
+           for (n, m, t, dr) in cur_f[const.PARAMETERS]:
+             #print "type: ", t
+             #t1 - it is typedef enum to look for
+             (gt, t1) = self.gui_type_resolve(t)
+
+             print gt, t, t1
+             if gt == "GUI_TYPE_UNKNOWN":
+                add_this_func = 0
+             else:
+               type_str.append(gt)
+           type_str.append("GUI_TYPE_NONE")
+
+         if add_this_func:      
+           arr_name = "_%s_params"%(cur_f_name)
+           op_types = "Gui_Type %s[] = {%s};"%(arr_name, ", ".join(type_str))
+         else:
+           verbose_print("func \"%s\" wont be added"%(cur_f_name))
+           continue
+
+         eo_do_add_call = "EGUI_EO_DO_CALL"
+         if "constructor" in cur_f_name:
+            eo_do_add_call = "EGUI_EO_ADD_CALL"
+         op_desc = "\t{\"%s\", {&%s, %s, %s, \"%s\", %s}}"%(cur_f_name, kl[const.BASE_ID], cur_f[const.OP_ID], eo_do_add_call, cur_f_name, arr_name)
+
+         op_types_init_lst.append(op_types);
+         op_desc_init_lst.append(op_desc)
+         print kl[const.C_NAME], kl[const.GET_FUNCTION]
+    return (op_types_init_lst, op_desc_init_lst)
 
 
   #set internal variable for outdir

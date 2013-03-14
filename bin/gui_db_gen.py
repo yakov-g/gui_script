@@ -2,7 +2,6 @@
 
 from eoparser.helper import dir_files_get, abs_path_get, isC, isH, isXML
 from eoparser.helper import _const
-from eoparser.xmlparser import XMLparser
 from eoparser.cparser import Cparser
 from argparse import ArgumentParser
 import sys
@@ -88,54 +87,9 @@ def main():
   for k in cp.cl_data:
     cp.parse_op_func_params(k)
 
-  #creating list of all parents for classes which are in tree
-  list_of_parents = []
-  for k in cp.cl_data:
-    list_of_parents += cp.cl_data[k][const.PARENTS]
-  list_of_parents = list(set(list_of_parents))
-
-  #checking, if we need to find any parent and filtering it's ids
-  cl_data_tmp2 = dict(cp.cl_data)
-  parents_to_find = filter(lambda ll: True if ll not in cl_data_tmp2 else False, list_of_parents)
-
-  #if we have parents to find
-  """
-  if len(parents_to_find) != 0:
-    if len(xmldir) == 0:
-      print "No XML directory was provided"
-
-    verbose_print("xmldir: %s\n"%xmldir)
-    xml_files = dir_files_get(xmldir)
-    xml_files = filter(isXML, xml_files)
-
-    if len(xml_files) == 0:
-      print "ERROR: no include files found for %s classes... Aborting..."% ",".join(parents_to_find)
-      exit(1)
-
-    #parsing include XMLs
-    xp = XMLparser()
-    for f in xml_files:
-      xp.parse(f)
-
-    #saving data about parents we were looking for
-    for n, o in xp.objects.items():
-      if o.macro in parents_to_find:
-         cp.cl_incl[o.macro] = {const.MODULE : o.mod_name,
-                                const.C_NAME : o.c_name}
-         i = parents_to_find.index(o.macro)
-         parents_to_find.pop(i)
-    del xp
-
-    #if there are still parents, which we need to find - exit
-    if len(parents_to_find) != 0:
-      print "ERROR: XML files weren't found for %s classes... Aborting"%(",".join(parents_to_find))
-      exit(1)
-"""
   #cp.print_data()
-  cp.typedef_file_create()
-  #building XMLs
-#  for k in cp.cl_data:
-#    cp.build_xml(k)
+  tup = cp.gui_parser_data_get()
+  cp.typedef_file_create(tup)
 
   del cp
 
