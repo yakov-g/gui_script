@@ -768,7 +768,23 @@ class Cparser(object):
     allfile = f.read()
     f.close()
 
-    lines = filter(len, allfile.split("\n"))
+    lst = []
+    reg = "CLASSES =([^;]*);"
+    lst += re.findall(reg, allfile)
+    classes = lst[0]
+    classes = "".join(classes.split("\n"))
+    classes = classes.split(",")
+    for (i, cl) in enumerate(classes):
+       classes[i] = cl.lstrip().rstrip()
+    classes = filter(len, classes)
+    classes = list(set(classes))
+
+    lst = []
+    reg = "OPERATIONS =([^;]*);"
+    lst += re.findall(reg, allfile)
+    lines = lst[0]
+
+    lines = filter(len, lines.split("\n"))
     for l in lines:
        l_tmp = l.split(":")
        f_tokens = l_tmp[0]
@@ -826,8 +842,9 @@ class Cparser(object):
          op_desc_init_lst.append(op_desc)
 
       #for each class
-      cl_desc = "\t{\"%s\", %s}"%(kl[const.C_NAME], kl[const.GET_FUNCTION])
-      cl_desc_init_lst.append(cl_desc)
+      if ((kl[const.C_NAME] in classes) or (len(classes) == 0)):
+        cl_desc = "\t{\"%s\", %s}"%(kl[const.C_NAME], kl[const.GET_FUNCTION])
+        cl_desc_init_lst.append(cl_desc)
     return (op_types_init_lst, op_desc_init_lst, cl_desc_init_lst)
 
 

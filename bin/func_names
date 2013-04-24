@@ -1,3 +1,4 @@
+OPERATIONS =
 evas_obj_color,set:color_set:
 evas_obj_size_set:size_set:
 evas_obj_position,set:position_set:
@@ -10,3 +11,12 @@ elm_obj_win_resize_object_add:resize_object_add
 elm_wdg_part_text_set:  part_text_set
 elm_obj_win_constructori:
 _multi_select_set:
+;
+
+
+CLASSES = 
+elm_win  ,
+elm_button,
+elm_bg,
+   ;
+
