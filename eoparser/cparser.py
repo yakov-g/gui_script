@@ -686,11 +686,18 @@ class Cparser(object):
 
     op_type_init_lst = _tup[0]
     op_desc_init_lst = _tup[1]
+    cl_desc_init_lst = _tup[2]
+
     f.write("%s\n\n"%("\n".join(op_type_init_lst)))
 
     s_tmp = ",\n".join(op_desc_init_lst)
-    s_tmp = "OP _eo_op_arr[] = {\n%s,\n\t{NULL, {NULL, 0, 0, 0, \"\", _null}}\n};\n"%(s_tmp)
+    s_tmp = "Op_Desc _eo_op_arr[] = {\n%s,\n\t{NULL, NULL, NULL, 0, 0, \"\", _null}\n};\n"%(s_tmp)
+    f.write("%s\n"%s_tmp)
+
+    s_tmp = ",\n".join(cl_desc_init_lst)
+    s_tmp = "Cl_Props _cl_arr[] = {\n%s,\n\t{NULL, NULL}\n};\n"%(s_tmp)
     f.write("%s"%s_tmp)
+
 
     f.write("\n#endif\n")
 
@@ -739,29 +746,36 @@ class Cparser(object):
         print "type: \"%s\" not found"%(_t)
      return (ret, t)
 
-  def func_name_check(self, _s, _lst):
-     for tokens_lst in _lst:
+  def func_name_check(self, _f_name, desc_lst):
+     for l in desc_lst:
+        tokens_lst = l[0]
         ret = True
-        for l in tokens_lst:
-          if l not in _s:
+        for token in tokens_lst:
+          if token not in _f_name:
              ret = False
         if ret:
-          return ret
-     return ret
+          return l
+     return None
 
 
   def gui_parser_data_get(self):
     op_types_init_lst = []
     op_desc_init_lst = []
+    cl_desc_init_lst = []
 
-    lst = []
+    desc_lst = []
     f = open('func_names', 'r')
     allfile = f.read()
     f.close()
 
-    lst_tmp = filter(len, allfile.split("\n"))
-    for l in lst_tmp:
-       lst.append(filter(len, l.split(",")))
+    lines = filter(len, allfile.split("\n"))
+    for l in lines:
+       l_tmp = l.split(":")
+       f_tokens = l_tmp[0]
+       f_alias = l_tmp[1]
+       f_tokens = "".join(f_tokens.split())
+       f_alias = "".join(f_alias.split())
+       desc_lst.append((filter(len, f_tokens.split(",")), f_alias))
 
     for kl_id in self.cl_data:
       #print ""
@@ -778,7 +792,8 @@ class Cparser(object):
          cur_f_name = cur_f[const.C_MACRO]
          add_this_func = 0
          type_str = []
-         if self.func_name_check(cur_f_name, lst):
+         found_desc = self.func_name_check(cur_f_name, desc_lst)
+         if found_desc is not None:
            add_this_func = 1
 
            for (n, m, t, dr) in cur_f[const.PARAMETERS]:
@@ -803,12 +818,17 @@ class Cparser(object):
          eo_do_add_call = "EGUI_EO_DO_CALL"
          if "constructor" in cur_f_name:
             eo_do_add_call = "EGUI_EO_ADD_CALL"
-         op_desc = "\t{\"%s\", {&%s, %s, %s, \"%s\", %s}}"%(cur_f_name, kl[const.BASE_ID], cur_f[const.OP_ID], eo_do_add_call, cur_f_name, arr_name)
+         #if alias name in database is empty, leave usual name
+         s = found_desc[1] if found_desc[1] != "" else cur_f_name
+         op_desc = "\t{\"%s\", \"%s\", &%s, %s, %s, \"%s\", %s}"%(kl[const.C_NAME], s, kl[const.BASE_ID], cur_f[const.OP_ID], eo_do_add_call, cur_f_name, arr_name)
 
          op_types_init_lst.append(op_types);
          op_desc_init_lst.append(op_desc)
-         print kl[const.C_NAME], kl[const.GET_FUNCTION]
-    return (op_types_init_lst, op_desc_init_lst)
+
+      #for each class
+      cl_desc = "\t{\"%s\", %s}"%(kl[const.C_NAME], kl[const.GET_FUNCTION])
+      cl_desc_init_lst.append(cl_desc)
+    return (op_types_init_lst, op_desc_init_lst, cl_desc_init_lst)
 
 
   #set internal variable for outdir
