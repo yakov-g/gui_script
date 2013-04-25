@@ -9,6 +9,7 @@ from helper import normalize_names
 from helper import _const
 
 print "LOcal cparser"
+GUI_CPARSER = True
 const = _const()
 
 #filter func to throw out from comment everything

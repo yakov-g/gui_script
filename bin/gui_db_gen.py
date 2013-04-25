@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 
+GUI_CPARSER = False
+
 from eoparser.helper import dir_files_get, abs_path_get, isC, isH, isXML
 from eoparser.helper import _const
 from eoparser.cparser import Cparser
+from eoparser.cparser import GUI_CPARSER
 from argparse import ArgumentParser
 import sys
 
@@ -15,6 +18,9 @@ def verbose_false(mes):
   pass
 
 def main():
+  if not GUI_CPARSER:
+     print "Wrong cparser imported:"
+     exit()
   print "local xml gen"
   parser = ArgumentParser()
   parser.add_argument("-d", "--dir", dest="directory",
