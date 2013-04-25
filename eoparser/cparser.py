@@ -32,7 +32,6 @@ class Cparser(object):
     print_flag = _print_flag
 
     self.typedef_enum = {}
-    self.typedef_enum_print = {}
     self.typedef_auto = {}
 
     self.cl_data = {}
@@ -620,25 +619,18 @@ class Cparser(object):
     for n, (f, t) in self.typedef_enum.items():
        print "n : %s; t: %s; f: %s"%(n, t, f)
 
-  def typedef_printf_get(self):
-    ret_lst = []
-    for n, (f, t) in self.typedef_enum_print.items():
-       #print n, t
-       for l in t:
-          s = "printf(\"%%s,%%d:\", \"%s\", %s);"%(l, l)
-          ret_lst.append(s)
-    return ret_lst
-
   def typedef_file_create(self, _tup):
     f = open ("typedefs.c", 'w')
     f.write("#include <stdio.h>\n");
     f.write("#include <Elementary.h>\n\n");
     f.write("int main()\n");
     f.write("{\n");
+    _enum_init_dict = _tup[3]
 
-    lst = self.typedef_printf_get()
-    for l in lst:
-       f.write("\t" + l + "\n")
+    for enum_list in _enum_init_dict.itervalues():
+       for l in enum_list:
+          s = "printf(\"%%s,%%d:\", \"%s\", %s);"%(l, l)
+          f.write("\t" + s + "\n")
 
     f.write("}");
     f.close()
@@ -654,6 +646,7 @@ class Cparser(object):
     subprocess.call(gcc_lst)
     pr = subprocess.Popen(["./start"], stdout = subprocess.PIPE)
     out, err = pr.communicate()
+    # parse output "ENUM1,0:ENUM2,1:"
     lst = filter(len, out.split(":"))
     os.unlink("typedefs.c")
     os.unlink("start")
@@ -675,11 +668,11 @@ class Cparser(object):
 
   # generating array of enum type names and values
     type_var_lst = []
-    for n, (f1, t) in self.typedef_enum_print.items():
-       s = "\t{\"%s\", %s_enums},"%(n, n)
+    for enum_type, enum_list in _enum_init_dict.items():
+       s = "\t{\"%s\", %s_enums},"%(enum_type, enum_type)
        type_var_lst.append(s)
-       s = "\", \"".join(t)
-       s = "char *%s_enums[] = {\"%s\", NULL};"%(n, s)
+       s = "\", \"".join(enum_list)
+       s = "char *%s_enums[] = {\"%s\", NULL};"%(enum_type, s)
        f.write("%s\n"%s)
 
     s = "\nEnum_Types enum_types[] =\n{%s\n\t{NULL, NULL}\n};\n\n"%("\n".join(type_var_lst))
@@ -699,9 +692,7 @@ class Cparser(object):
     s_tmp = "Cl_Props _cl_arr[] = {\n%s,\n\t{NULL, NULL}\n};\n"%(s_tmp)
     f.write("%s"%s_tmp)
 
-
     f.write("\n#endif\n")
-
     f.close();
 
   
@@ -734,8 +725,6 @@ class Cparser(object):
           keep_searching = False
           force_quit = False
         elif t in self.typedef_enum:
-          #need to add this enum into compilation file
-          self.typedef_enum_print[t] = self.typedef_enum[t]
           ret = "GUI_TYPE_ENUM"
           keep_searching = False
           force_quit = False
@@ -747,28 +736,18 @@ class Cparser(object):
         print "type: \"%s\" not found"%(_t)
      return (ret, t)
 
-  def func_name_check(self, _f_name, desc_lst):
-     for l in desc_lst:
-        tokens_lst = l[0]
-        ret = True
-        for token in tokens_lst:
-          if token not in _f_name:
-             ret = False
-        if ret:
-          return l
-     return None
-
-
   def gui_parser_data_get(self):
     op_types_init_lst = []
     op_desc_init_lst = []
     cl_desc_init_lst = []
+    enum_init_dict = {}
 
     desc_lst = []
     f = open('func_names', 'r')
     allfile = f.read()
     f.close()
 
+    # fetch list of classes to generate in DB
     lst = []
     reg = "CLASSES =([^;]*);"
     lst += re.findall(reg, allfile)
@@ -780,6 +759,7 @@ class Cparser(object):
     classes = filter(len, classes)
     classes = list(set(classes))
 
+    # fetch list of operations to generate in DB
     lst = []
     reg = "OPERATIONS =([^;]*);"
     lst += re.findall(reg, allfile)
@@ -794,22 +774,17 @@ class Cparser(object):
        f_alias = "".join(f_alias.split())
        desc_lst.append((filter(len, f_tokens.split(",")), f_alias))
 
-    for kl_id in self.cl_data:
-      #print ""
-      #print kl_id
-      kl = self.cl_data[kl_id]
-      kk = "funcs"
+    # iterate over each class
+    for kl in self.cl_data.itervalues():
+      #get funcs dict for current class
+      funcs_dict = kl["funcs"]
 
-      #print "  ", kk, " : ", type(kl[kk])# " : ", cp.cl_data[klass][kk]
-      funcs_dict = kl[kk]
-      spaces = " " * 15
       #for each func in class
-      for key in funcs_dict:
-         cur_f = funcs_dict[key]
+      for cur_f in funcs_dict.itervalues():
          cur_f_name = cur_f[const.C_MACRO]
          add_this_func = 0
          type_str = []
-         found_desc = self.func_name_check(cur_f_name, desc_lst)
+         found_desc = _func_name_check(cur_f_name, desc_lst)
          if found_desc is not None:
            add_this_func = 1
 
@@ -821,8 +796,10 @@ class Cparser(object):
              print gt, t, t1
              if gt == "GUI_TYPE_UNKNOWN":
                 add_this_func = 0
-             else:
-               type_str.append(gt)
+             elif gt == "GUI_TYPE_ENUM":
+            #need to add this enum into compilation file
+                enum_init_dict[t] = self.typedef_enum[t][1]
+             type_str.append(gt)
            type_str.append("GUI_TYPE_NONE")
 
          if add_this_func:      
@@ -843,10 +820,11 @@ class Cparser(object):
          op_desc_init_lst.append(op_desc)
 
       #for each class
+      # if no classes, put everything
       if ((kl[const.C_NAME] in classes) or (len(classes) == 0)):
         cl_desc = "\t{\"%s\", %s}"%(kl[const.C_NAME], kl[const.GET_FUNCTION])
         cl_desc_init_lst.append(cl_desc)
-    return (op_types_init_lst, op_desc_init_lst, cl_desc_init_lst)
+    return (op_types_init_lst, op_desc_init_lst, cl_desc_init_lst, enum_init_dict)
 
 
   #set internal variable for outdir
@@ -879,3 +857,16 @@ def smart_split(tmp):
 
   return l
 
+
+def _func_name_check(_f_name, desc_lst):
+   # desc_list is a list of tuples
+   # (["evas_obj", "...", "set"], "alias")
+   for l in desc_lst:
+      tokens_lst = l[0]
+      ret = True
+      for token in tokens_lst:
+        if token not in _f_name:
+           ret = False
+      if ret:
+        return l
+   return None
