@@ -689,7 +689,7 @@ class Cparser(object):
     f.write("%s\n"%s_tmp)
 
     s_tmp = ",\n".join(cl_desc_init_lst)
-    s_tmp = "Cl_Props _cl_arr[] = {\n%s,\n\t{NULL, NULL}\n};\n"%(s_tmp)
+    s_tmp = "Cl_Prop _cl_arr[] = {\n%s,\n\t{NULL, NULL, NULL}\n};\n"%(s_tmp)
     f.write("%s"%s_tmp)
 
     f.write("\n#endif\n")
@@ -708,7 +708,7 @@ class Cparser(object):
           "char*" : "GUI_TYPE_STRING",
           "char**" : "GUI_TYPE_STRING*",
           "void*" : "GUI_TYPE_VOID",
-          "Eina_Bool*" : "GUI_TYPE_VOID*",
+          "Eina_Bool*" : "GUI_TYPE_POINTER",
           "Evas_Object*" : "GUI_TYPE_OBJECT",
           "Evas_Map*" : "GUI_TYPE_MAP*",
           }
@@ -775,7 +775,7 @@ class Cparser(object):
        desc_lst.append((filter(len, f_tokens.split(",")), f_alias))
 
     # iterate over each class
-    for kl in self.cl_data.itervalues():
+    for kl_id, kl in self.cl_data.iteritems():
       #get funcs dict for current class
       funcs_dict = kl["funcs"]
 
@@ -822,7 +822,7 @@ class Cparser(object):
       #for each class
       # if no classes, put everything
       if ((kl[const.C_NAME] in classes) or (len(classes) == 0)):
-        cl_desc = "\t{\"%s\", %s}"%(kl[const.C_NAME], kl[const.GET_FUNCTION])
+        cl_desc = "\t{\"%s\", \"%s\", %s}"%(kl[const.C_NAME], kl_id, kl[const.GET_FUNCTION])
         cl_desc_init_lst.append(cl_desc)
     return (op_types_init_lst, op_desc_init_lst, cl_desc_init_lst, enum_init_dict)
 

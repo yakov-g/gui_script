@@ -3,20 +3,145 @@ evas_obj_color,set:color_set:
 evas_obj_size_set:size_set:
 evas_obj_position,set:position_set:
 evas_obj_size_hint_weight,set:size_hint_weight_set
+evas_obj_size_hint_aspect,set:size_hint_aspect_set
+evas_obj_size_hint_align,set:size_hint_align_set
 evas_obj_visibility_set:visibility_set
+
 elm_obj_bg_color_set:bg_color_set
+
 elm_obj_win_title_set:title_set
 elm_obj_win,autodel_set:autodel_set
 elm_obj_win_resize_object_add:resize_object_add
-elm_wdg_part_text_set:  part_text_set
 elm_obj_win_constructor:
-_multi_select_set:
+
+elm_wdg_style_set : style_set
+elm_wdg_part_text_set:  part_text_set
+elm_wdg_disabled_set : disabled
+elm_wdg_access_info_set : access_info_set
+
+elm_obj_container_content_set:content_set
+elm_obj_box_pack_end:pack_end
+
+elm_scrollable_interface_bounce_allow_set:bounce_allow
+elm_scrollable_interface_policy_set:policy
+
+elm_obj_image_file_set:image_file_set
+elm_obj_image_resizable_set:image_resizable_set
+
+elm_obj_button_autorepeat_set : autorepeat_set
+elm_obj_button_autorepeat_initial_timeout_set : autorepeat_initial_timeout_set
+elm_obj_button_autorepeat_gap_timeout_set : autorepeat_gap_timeout_set
+
+elm_obj_check_state_set : check_state
+
+elm_obj_entry_single_line_set : single_line
+elm_obj_entry_scrollable_set : scrollable
+elm_obj_frame_autocollapse_set : autocollapse
+elm_obj_box_horizontal_set : horizontal
+elm_obj_box_clear : clear
+elm_obj_box_align_set : box_align 
+
+
+
 ;
 
 
 CLASSES = 
-elm_win  ,
+elm_notify,
+Scrollable_Interface,
+elm_image,
+elm_hover,
+elm_layout,
+elm_actionslider,
+Selectable_Interface,
+elm_spinner,
+elm_calendar,
+elm_toolbar,
+elm_progressbar,
+elm_panel,
+elm_access,
+elm_mapbuf,
+elm_entry,
+Evas_Object_Smart_Clipped,
+elm_flipselector,
+elm_video,
+elm_index,
+Evas_Object_Box,
+elm_ctxpopup,
+Evas,
+elm_radio,
+elm_diskselector,
+elm_colorselector,
+elm_prefs,
+elm_web,
+elm_interface_scrollable,
+Evas_Object_Line,
+Draggable_Interface,
+elm_dayselector,
+Evas_Object_Image,
+elm_fileselector_button,
+elm_thumb,
+elm_systray,
+Evas_Common_Interface,
+elm_conformant,
+Evas_Object_Textblock,
+elm_map,
+Clickable_Interface,
+elm_route,
+elm_pan,
+Zoomable_Interface,
+elm_check,
+Evas_Object,
+elm_widget,
+elm_segment_control,
+elm_frame,
+elm_glview,
+elm_naviframe,
+elm_flip,
+elm_gengrid_pan,
+elm_datetime,
 elm_button,
+elm_photocam_pan,
+elm_player,
+Evas_Object_Text,
+elm_icon,
+elm_genlist,
+elm_slider,
+elm_table,
+elm_panes,
+elm_fileselector,
+Evas_Object_Grid,
+elm_slideshow,
+elm_multibuttonentry,
+evas_object_textgrid,
+Evas_Object_Table,
+elm_fileselector_entry,
+Evas_Object_Rectangle,
+elm_grid,
+Evas_Out,
+elm_clock,
+elm_gesture_layer,
+elm_menu,
+elm_hoversel,
+elm_bubble,
+elm_list,
+elm_container,
+elm_photo,
+elm_map_pan,
+elm_scroller,
+Evas_Object_Polygon,
+elm_win,
+elm_gengrid,
+elm_box,
+elm_plug,
+elm_popup,
 elm_bg,
-   ;
+elm_inwin,
+elm_separator,
+Signal_Interface,
+Evas_Object_Smart,
+elm_genlist_pan,
+elm_label,
+elm_photocam
+;
 
