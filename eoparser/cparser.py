@@ -36,6 +36,7 @@ class Cparser(object):
 
     self.cl_data = {}
     self.cl_incl = {}
+    self.gui_events = []
 
     self.outdir = ""
     self.typedefs = {"Evas_Coord" : "int",
@@ -190,6 +191,18 @@ class Cparser(object):
 
        class_def[key] = [desc_var, parent, l_tmp]
     
+  #event_desc structure
+  # { EV_CLICKED, EV_BUTTON_DOWN, EV_BUTTON_UP, NULL  }
+  #
+    reg = "Eo_Event_Description[ ]*([\w]*)[ =]*EO_EVENT_DESCRIPTION\(([^\)]*)\)"
+    af = _in_data.replace("\n", "")
+    ev_list = re.findall(reg, af)
+    for tup in ev_list:
+       key = tup[0]
+       name = tup[1].replace(" ", "").split(",")
+       lst = tup[1].split("\"")
+       it = filter(len, lst)[0]
+       self.gui_events.append("\t{\"%s\", &%s},"%(it, key))
 
   #event_desc structure
   # { EV_CLICKED, EV_BUTTON_DOWN, EV_BUTTON_UP, NULL  }
@@ -654,7 +667,7 @@ class Cparser(object):
     f = open ("db_dynamic_init.h", 'w')
     f.write("#ifndef _DB_DYNAMIC_INIT_H\n")
     f.write("#define _DB_DYNAMIC_INIT_H\n\n")
-    f.write("static Gui_Type _null[] = {GUI_TYPE_NONE};\n\n")
+    f.write("static Gui_Type_Desc _null[] = {{GUI_TYPE_NONE, \"\"}};\n\n")
     f.write("Enum_Props enum_arr[] = {\n")
     for s in lst:
        ab = s.split(",")
@@ -678,6 +691,10 @@ class Cparser(object):
     s = "\nEnum_Types enum_types[] =\n{%s\n\t{NULL, NULL}\n};\n\n"%("\n".join(type_var_lst))
     f.write("%s"%s)
 
+    ev_desc_init_lst = _tup[4]
+    s = "\nGui_Event_Desc event_desc[] =\n{%s\n\t{NULL, NULL}\n};\n\n"%("\n".join(ev_desc_init_lst))
+    f.write("%s"%s)
+   
     op_type_init_lst = _tup[0]
     op_desc_init_lst = _tup[1]
     cl_desc_init_lst = _tup[2]
@@ -799,12 +816,12 @@ class Cparser(object):
              elif gt == "GUI_TYPE_ENUM":
             #need to add this enum into compilation file
                 enum_init_dict[t] = self.typedef_enum[t][1]
-             type_str.append(gt)
-           type_str.append("GUI_TYPE_NONE")
+             type_str.append("{%s, \"%s\"}"%(gt, t))
+           type_str.append("{GUI_TYPE_NONE, \"none\"}")
 
          if add_this_func:      
            arr_name = "_%s_params"%(cur_f_name)
-           op_types = "Gui_Type %s[] = {%s};"%(arr_name, ", ".join(type_str))
+           op_types = "Gui_Type_Desc %s[] = {%s};"%(arr_name, ", ".join(type_str))
          else:
            verbose_print("func \"%s\" wont be added"%(cur_f_name))
            continue
@@ -824,7 +841,7 @@ class Cparser(object):
       if ((kl[const.C_NAME] in classes) or (len(classes) == 0)):
         cl_desc = "\t{\"%s\", \"%s\", %s}"%(kl[const.C_NAME], kl_id, kl[const.GET_FUNCTION])
         cl_desc_init_lst.append(cl_desc)
-    return (op_types_init_lst, op_desc_init_lst, cl_desc_init_lst, enum_init_dict)
+    return (op_types_init_lst, op_desc_init_lst, cl_desc_init_lst, enum_init_dict, self.gui_events)
 
 
   #set internal variable for outdir
