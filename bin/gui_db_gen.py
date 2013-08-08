@@ -21,7 +21,7 @@ def main():
   if not GUI_CPARSER:
      print "Wrong cparser imported:"
      exit()
-  print "local xml gen"
+  print "Starting generation..."
   parser = ArgumentParser()
   parser.add_argument("-d", "--dir", dest="directory",
                   action="append", help="Source C-files to introspect", required=True)

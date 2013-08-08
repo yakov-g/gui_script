@@ -8,7 +8,7 @@ from string import capwords
 from helper import normalize_names
 from helper import _const
 
-print "LOcal cparser"
+print "Egui_db_generation cparser found..."
 GUI_CPARSER = True
 const = _const()
 
@@ -202,7 +202,7 @@ class Cparser(object):
        name = tup[1].replace(" ", "").split(",")
        lst = tup[1].split("\"")
        it = filter(len, lst)[0]
-       self.gui_events.append("\t{\"%s\", &%s},"%(it, key))
+       self.gui_events.append("\t{\"%s\", &%s, \"&%s\"},"%(it, key, key))
 
   #event_desc structure
   # { EV_CLICKED, EV_BUTTON_DOWN, EV_BUTTON_UP, NULL  }
@@ -236,7 +236,11 @@ class Cparser(object):
       for t in ids_and_descs:
          op_id = t[0] #op_id
          func_name = re.findall("SUB_ID_(.*)", op_id)
-         func_name = func_name[0].lower()
+         if (len(func_name) == 0):
+            print "Warning! Check: %s"%(t[0])
+            func_name = t[0].lower()
+         else: 
+            func_name = func_name[0].lower()
          op_list.append((op_id, func_name))
 
       op_desc[tup[0]] = op_list
@@ -668,7 +672,7 @@ class Cparser(object):
     f.write("#ifndef _DB_DYNAMIC_INIT_H\n")
     f.write("#define _DB_DYNAMIC_INIT_H\n\n")
     f.write("static Gui_Type_Desc _null[] = {{GUI_TYPE_NONE, \"\"}};\n\n")
-    f.write("Enum_Props enum_arr[] = {\n")
+    f.write("static Enum_Props enum_arr[] = {\n")
     for s in lst:
        ab = s.split(",")
        a = ab[0]
@@ -685,14 +689,14 @@ class Cparser(object):
        s = "\t{\"%s\", %s_enums},"%(enum_type, enum_type)
        type_var_lst.append(s)
        s = "\", \"".join(enum_list)
-       s = "char *%s_enums[] = {\"%s\", NULL};"%(enum_type, s)
+       s = "static char *%s_enums[] = {\"%s\", NULL};"%(enum_type, s)
        f.write("%s\n"%s)
 
-    s = "\nEnum_Types enum_types[] =\n{%s\n\t{NULL, NULL}\n};\n\n"%("\n".join(type_var_lst))
+    s = "\nstatic Enum_Types enum_types[] =\n{%s\n\t{NULL, NULL}\n};\n\n"%("\n".join(type_var_lst))
     f.write("%s"%s)
 
     ev_desc_init_lst = _tup[4]
-    s = "\nGui_Event_Desc event_desc[] =\n{%s\n\t{NULL, NULL}\n};\n\n"%("\n".join(ev_desc_init_lst))
+    s = "\nstatic Gui_Event_Desc event_desc[] =\n{%s\n\t{NULL, NULL, NULL}\n};\n\n"%("\n".join(ev_desc_init_lst))
     f.write("%s"%s)
    
     op_type_init_lst = _tup[0]
@@ -702,11 +706,11 @@ class Cparser(object):
     f.write("%s\n\n"%("\n".join(op_type_init_lst)))
 
     s_tmp = ",\n".join(op_desc_init_lst)
-    s_tmp = "Op_Desc _eo_op_arr[] = {\n%s,\n\t{NULL, NULL, NULL, 0, 0, \"\", _null}\n};\n"%(s_tmp)
+    s_tmp = "static Op_Desc _eo_op_arr[] = {\n%s,\n\t{NULL, NULL, NULL, 0, 0, \"\", _null}\n};\n"%(s_tmp)
     f.write("%s\n"%s_tmp)
 
     s_tmp = ",\n".join(cl_desc_init_lst)
-    s_tmp = "Cl_Prop _cl_arr[] = {\n%s,\n\t{NULL, NULL, NULL}\n};\n"%(s_tmp)
+    s_tmp = "static Cl_Prop _cl_arr[] = {\n%s,\n\t{NULL, NULL, NULL}\n};\n"%(s_tmp)
     f.write("%s"%s_tmp)
 
     f.write("\n#endif\n")
@@ -821,7 +825,7 @@ class Cparser(object):
 
          if add_this_func:      
            arr_name = "_%s_params"%(cur_f_name)
-           op_types = "Gui_Type_Desc %s[] = {%s};"%(arr_name, ", ".join(type_str))
+           op_types = "static Gui_Type_Desc %s[] = {%s};"%(arr_name, ", ".join(type_str))
          else:
            verbose_print("func \"%s\" wont be added"%(cur_f_name))
            continue

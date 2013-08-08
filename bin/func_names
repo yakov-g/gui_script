@@ -41,6 +41,14 @@ elm_obj_box_horizontal_set : horizontal
 elm_obj_box_clear : clear
 elm_obj_box_align_set : box_align 
 
+elm_obj_grid_size_set : grid_size
+elm_obj_grid_pack : grid_pack
+
+elm_obj_panel_hidden_set : panel_hidden
+elm_obj_panel_orient_set : panel_orient
+
+elm_obj_panes_horizontal_set : panes_horizontal
+
 
 
 ;
